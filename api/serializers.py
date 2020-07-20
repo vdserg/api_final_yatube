@@ -27,29 +27,28 @@ class GroupSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    user = serializers.ReadOnlyField(source='user.username')
-    following = serializers.ReadOnlyField(source='following.username')
+    user = serializers.SlugRelatedField(
+        slug_field='username',
+        queryset=User.objects.all(),
+        default=serializers.CurrentUserDefault()
+    )
+    following = serializers.SlugRelatedField(slug_field='username',
+                                             queryset=User.objects.all())
 
     def validate(self, attrs):
         data = self.initial_data
         user = self.context.get('request').user
-        if 'following' not in data:
-            raise serializers.ValidationError("Following field can't be empty")
-        elif User.objects.filter(username=data['following']).exists():
-            following = User.objects.get(username=data['following'])
-        else:
-            raise serializers.ValidationError(
-                "User matching following don't exist")
 
-        if user == following:
+        if user.username == data['following']:
             raise serializers.ValidationError("User can't follow himself")
-
-        if user.following.filter(following=following).exists():
-            raise serializers.ValidationError(
-                "User can't follow same author twice")
-
         return data
 
     class Meta:
         fields = ('id', 'user', 'following')
         model = Follow
+        validators = [
+            serializers.UniqueTogetherValidator(
+                queryset=model.objects.all(),
+                fields=['user', 'following']
+            )
+        ]
