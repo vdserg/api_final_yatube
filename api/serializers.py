@@ -40,11 +40,14 @@ class FollowSerializer(serializers.ModelSerializer):
         else:
             raise serializers.ValidationError(
                 "User matching following don't exist")
+
         if user == following:
             raise serializers.ValidationError("User can't follow himself")
+
         if user.following.filter(following=following).exists():
             raise serializers.ValidationError(
                 "User can't follow same author twice")
+
         return data
 
     class Meta:
