@@ -1,4 +1,4 @@
-from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Q
 from rest_framework import viewsets, mixins, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, \
@@ -7,14 +7,13 @@ from rest_framework.permissions import IsAuthenticated, \
 from api.permissions import IsOwnerOrReadOnly
 from api.serializers import PostSerializer, CommentSerializer, \
     GroupSerializer, FollowSerializer
-from .models import Post, Group, Follow, User
+from .models import Post, Group, Follow
 
 
 class PostViewSet(viewsets.ModelViewSet):
     serializer_class = PostSerializer
     queryset = Post.objects.all()
-    permission_classes = (IsOwnerOrReadOnly,)
-    filter_backends = [DjangoFilterBackend]
+    permission_classes = (IsOwnerOrReadOnly, IsAuthenticatedOrReadOnly)
     filterset_fields = ['group']
 
     def perform_create(self, serializer):
@@ -31,8 +30,7 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         get_object_or_404(Post, id=self.kwargs['post_id'])
-        return serializer.save(author=self.request.user,
-                               post_id=self.kwargs['post_id'])
+        return serializer.save(author=self.request.user)
 
 
 class GroupViewSet(mixins.CreateModelMixin,
@@ -48,19 +46,15 @@ class FollowViewSet(mixins.CreateModelMixin,
                     mixins.ListModelMixin,
                     viewsets.GenericViewSet,):
 
-    queryset = Follow.objects.all()
     serializer_class = FollowSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,)
+    permission_classes = (IsAuthenticatedOrReadOnly,) # тестами требуется вернуть статус 200 без токена поэтому сделал get_queryset
     filter_backends = [filters.SearchFilter]
     search_fields = ['=user__username', '=following__username']
 
-    def perform_create(self, serializer):
-        return serializer.save(
-            user=self.request.user,
-            following=User.objects.get(
-                username=self.request.data.get('following'))
-        )
-
-
-
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Follow.objects.all()
+        else:
+            return []
 
