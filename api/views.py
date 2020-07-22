@@ -1,4 +1,3 @@
-from django.db.models import Q
 from rest_framework import viewsets, mixins, filters
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, \
@@ -47,7 +46,7 @@ class FollowViewSet(mixins.CreateModelMixin,
                     viewsets.GenericViewSet,):
 
     serializer_class = FollowSerializer
-    permission_classes = (IsAuthenticatedOrReadOnly,) # тестами требуется вернуть статус 200 без токена поэтому сделал get_queryset
+    permission_classes = (IsAuthenticatedOrReadOnly,) # тестами требуется вернуть статус 200 без токена, поэтому сделал get_queryset
     filter_backends = [filters.SearchFilter]
     search_fields = ['=user__username', '=following__username']
 
@@ -57,4 +56,3 @@ class FollowViewSet(mixins.CreateModelMixin,
             return Follow.objects.all()
         else:
             return []
-
